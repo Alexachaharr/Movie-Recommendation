@@ -1,0 +1,39 @@
+# Production-like stack: app + PostgreSQL + Redis.   docker compose up --build
+services:
+  app:
+    build: .
+    ports: ["8000:8000"]
+    environment:
+      DATABASE_URL: postgresql+psycopg://reco:reco@db:5432/reco
+      REDIS_URL: redis://redis:6379/0
+      ADMIN_TOKEN: ${ADMIN_TOKEN:-change-me}
+      WEB_CONCURRENCY: 2
+    volumes:
+      - models:/app/models
+    depends_on:
+      db: {condition: service_healthy}
+      redis: {condition: service_started}
+    restart: unless-stopped
+
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: reco
+      POSTGRES_PASSWORD: reco
+      POSTGRES_DB: reco
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U reco"]
+      interval: 5s
+      retries: 10
+    restart: unless-stopped
+
+  redis:
+    image: redis:7-alpine
+    command: ["redis-server", "--maxmemory", "256mb", "--maxmemory-policy", "allkeys-lru"]
+    restart: unless-stopped
+
+volumes:
+  pgdata:
+  models:

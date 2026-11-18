@@ -1,0 +1,10 @@
+#!/bin/sh
+set -e
+# Create schema, seed the synthetic dataset if the DB is empty, train if no model exists.
+python -m app.cli bootstrap
+exec gunicorn app.main:app \
+  --worker-class uvicorn.workers.UvicornWorker \
+  --workers "${WEB_CONCURRENCY:-2}" \
+  --bind "0.0.0.0:${PORT:-8000}" \
+  --timeout 120 \
+  --access-logfile -
